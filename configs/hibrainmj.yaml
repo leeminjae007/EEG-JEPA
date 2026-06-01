@@ -1,0 +1,68 @@
+model:
+  n_channels: 19
+  patch_len: 16
+  embed_dim: 768
+  num_heads: 12
+  mlp_ratio: 4.0
+  patch_criss_cross_depth: 4
+  summary_depth: 1
+  dropout: 0.0
+  drop_path: 0.1
+  use_gated_summary_injection: false
+  use_geometry_bias: false
+  spatial_pe_dim: 384
+  temporal_pe_dim: 384
+  montage_name: standard_1020
+  channel_names: [Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2, F7, F8, T3, T4, T5, T6, Fz, Cz, Pz]
+
+hibrainmj:
+  ema_momentum: 0.996
+  pred_depth: 6
+  pred_num_heads: 12
+  target_scale: [0.15, 0.2]
+  context_scale: [0.85, 1.0]
+  aspect_ratio: [0.75, 1.5]
+  num_target_blocks: 4
+  num_context_blocks: 1
+
+data:
+  modality: eeg
+  batch_size: 8
+  num_workers: 4
+  persistent_workers: true
+  prefetch_factor: 4
+  pin_mem: true
+  root_path: /NFS71/EEG/tuh_eeg/tuh_eeg/tuh_eeg-preprocessed/
+  packed_data_path: /tmp/tuheeg_packed/all_eeg.npy
+  packed_keys_path: /tmp/tuheeg_packed/all_eeg_keys.npy
+  test_ratio: 0.2
+  num_channels: 19
+  window_size: 6000
+  num_patches: 375
+  channel_names: [Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2, F7, F8, T3, T4, T5, T6, Fz, Cz, Pz]
+  max_samples: null
+  num_subjects: null
+  subset_subjects_path: null
+
+optimization:
+  epochs: 30
+  warmup: 5
+  lr: 0.0005
+  final_lr: 0.000001
+  weight_decay: 0.04
+
+logging:
+  folder: /home/leemj/new_vis/logs/hibrainmj
+  tensorboard: true
+  wandb:
+    enabled: true
+    project: hibrainmj
+    entity: null
+    name: hibrainmj-pretrain
+    group: pretrain
+    tags: [eeg, hibrainmj]
+
+meta:
+  load_checkpoint: false
+  read_checkpoint: null
+  use_bfloat16: true
