@@ -35,6 +35,24 @@ def parse_bool(text):
     return str(text).lower() in {'1', 'true', 'yes', 'y', 't'}
 
 
+def parse_tags(text):
+    if text is None or text == '':
+        return None
+    if isinstance(text, list):
+        return [str(v).strip() for v in text if str(v).strip()]
+    return [v.strip() for v in str(text).split(',') if v.strip()]
+
+
+def parse_int_list(text):
+    if text is None or text == '':
+        return None
+    if isinstance(text, list):
+        values = text
+    else:
+        values = [v.strip() for v in str(text).split(',') if v.strip()]
+    return [int(v) for v in values]
+
+
 def parse_simple_yaml_mapping(text):
     def parse_scalar(raw):
         v = raw.strip()
@@ -157,9 +175,13 @@ def main():
     parser.add_argument('--fname', type=str, default=pre_args.fname)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--cuda', type=int, default=0)
+    parser.add_argument('--data_parallel', type=parse_bool, default=False)
+    parser.add_argument('--gpu_ids', type=str, default='')
     parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--warmup_epochs', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--min_lr', type=float, default=1e-6)
     parser.add_argument('--weight_decay', type=float, default=5e-2)
     parser.add_argument('--optimizer', type=str, default='AdamW', choices=['AdamW', 'SGD'])
     parser.add_argument('--clip_value', type=float, default=1.0)
@@ -204,18 +226,55 @@ def main():
         default='',
         help='comma-separated channel names; empty means auto naming',
     )
+    parser.add_argument('--max_train_batches', type=int, default=0)
+    parser.add_argument('--max_eval_batches', type=int, default=0)
+    parser.add_argument('--log_interval_steps', type=int, default=20)
+    parser.add_argument('--show_tqdm', type=parse_bool, default=True)
+    parser.add_argument('--wandb', type=parse_bool, default=False)
+    parser.add_argument('--wandb_project', type=str, default='eeg-jepa-finetune')
+    parser.add_argument('--wandb_entity', type=str, default='')
+    parser.add_argument('--wandb_name', type=str, default='')
+    parser.add_argument('--wandb_group', type=str, default='')
+    parser.add_argument('--wandb_tags', type=str, default='')
 
     parser.set_defaults(**yaml_defaults)
     params = parser.parse_args()
     params.channel_names = parse_channel_names(params.channel_names)
+    params.wandb_tags = parse_tags(params.wandb_tags)
+    params.gpu_ids = parse_int_list(params.gpu_ids)
+    params.wandb_entity = params.wandb_entity or None
+    params.wandb_name = params.wandb_name or None
+    params.wandb_group = params.wandb_group or None
 
     setup_seed(params.seed)
 
     if torch.cuda.is_available():
-        torch.cuda.set_device(params.cuda)
-        params.device = f'cuda:{params.cuda}'
+        available_gpus = torch.cuda.device_count()
+        if params.gpu_ids is not None:
+            invalid_gpu_ids = [gpu_id for gpu_id in params.gpu_ids if gpu_id < 0 or gpu_id >= available_gpus]
+            if invalid_gpu_ids:
+                raise ValueError(
+                    f'Invalid gpu_ids {invalid_gpu_ids}; available GPU ids are 0..{available_gpus - 1}'
+                )
+            device_ids = params.gpu_ids
+        elif params.data_parallel:
+            device_ids = list(range(available_gpus))
+        else:
+            device_ids = [params.cuda]
+
+        if len(device_ids) == 0:
+            raise ValueError('No GPU ids resolved for CUDA execution')
+
+        params.device_ids = device_ids
+        params.num_gpus = len(device_ids)
+        params.data_parallel = len(device_ids) > 1 and (params.data_parallel or params.gpu_ids is not None)
+        torch.cuda.set_device(device_ids[0])
+        params.device = f'cuda:{device_ids[0]}'
     else:
         params.device = 'cpu'
+        params.device_ids = []
+        params.num_gpus = 0
+        params.data_parallel = False
 
     print(params)
     print('The downstream dataset is {}'.format(params.downstream_dataset))

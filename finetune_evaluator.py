@@ -101,13 +101,17 @@ class Evaluator:
         self.params = params
         self.data_loader = data_loader
         self.device = torch.device(params.device)
+        self.max_eval_batches = max(int(getattr(params, 'max_eval_batches', 0)), 0)
+        self.show_tqdm = bool(getattr(params, 'show_tqdm', False))
 
     def get_metrics_for_multiclass(self, model):
         model.eval()
         truths = []
         preds = []
 
-        for x, y in tqdm(self.data_loader, mininterval=1):
+        for batch_idx, (x, y) in enumerate(tqdm(self.data_loader, mininterval=1, disable=not self.show_tqdm)):
+            if self.max_eval_batches > 0 and batch_idx >= self.max_eval_batches:
+                break
             x = x.to(self.device)
             y = y.to(self.device).long()
             pred = model(x)
@@ -130,7 +134,9 @@ class Evaluator:
         preds = []
         scores = []
 
-        for x, y in tqdm(self.data_loader, mininterval=1):
+        for batch_idx, (x, y) in enumerate(tqdm(self.data_loader, mininterval=1, disable=not self.show_tqdm)):
+            if self.max_eval_batches > 0 and batch_idx >= self.max_eval_batches:
+                break
             x = x.to(self.device)
             y = y.to(self.device)
             pred = model(x)
@@ -156,7 +162,9 @@ class Evaluator:
         truths = []
         preds = []
 
-        for x, y in tqdm(self.data_loader, mininterval=1):
+        for batch_idx, (x, y) in enumerate(tqdm(self.data_loader, mininterval=1, disable=not self.show_tqdm)):
+            if self.max_eval_batches > 0 and batch_idx >= self.max_eval_batches:
+                break
             x = x.to(self.device)
             y = y.to(self.device)
             pred = model(x)

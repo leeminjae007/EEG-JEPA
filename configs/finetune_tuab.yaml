@@ -1,0 +1,51 @@
+seed: 0
+cuda: 0
+data_parallel: true
+gpu_ids: [0, 1, 2, 3]
+epochs: 10
+warmup_epochs: 1
+batch_size: 16
+lr: 0.00005
+min_lr: 0.000001
+weight_decay: 0.05
+optimizer: AdamW
+clip_value: 1.0
+dropout: 0.0
+classifier: all_patch_reps
+
+downstream_dataset: TUAB
+datasets_dir: /NFS/EEG/eeg_foundation_downstream/TUAB
+task_type: binaryclass
+num_of_classes: 2
+model_dir: /home/leemj/eeg-foundation/finetune_log/tuab_finetune_runs/finetune_tuab
+
+num_workers: 4
+label_smoothing: 0.1
+multi_lr: true
+frozen: false
+use_pretrained_weights: true
+foundation_dir: /home/leemj/eeg-foundation/hibrainm.pth.tar
+
+model_name: hibrainmj
+num_channels: 19
+num_patches: 10
+patch_size: 200
+embed_dim: 768
+num_heads: 12
+mlp_ratio: 4.0
+patch_criss_cross_depth: 4
+summary_depth: 1
+drop_path: 0.1
+use_gated_summary_injection: false
+spatial_pe_dim: 384
+temporal_pe_dim: 384
+montage_name: standard_1020
+channel_names: [Fp1, Fp2, F3, F4, C3, C4, P3, P4, O1, O2, F7, F8, T3, T4, T5, T6, Fz, Cz, Pz]
+
+wandb: true
+wandb_project: eeg-jepa-finetune
+wandb_name: finetune-tuab-10ep
+wandb_group: tuab-finetune
+wandb_tags: [tuab, finetune, 10epoch]
+log_interval_steps: 20
+show_tqdm: false
